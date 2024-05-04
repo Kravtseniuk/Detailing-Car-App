@@ -1,1 +1,1 @@
-# Detailing-Car-App
+**Detailing Car Applicaton** this web application is developed using ASP.NET Core Web API and Blazor WebAssembly. The target audience is administrators of detailing studios, the application helps in registering clients for services, calculating the cost of services, personnel management, calculating business expenses, etc.

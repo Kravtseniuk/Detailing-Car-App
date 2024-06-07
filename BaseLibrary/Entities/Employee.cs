@@ -1,8 +1,15 @@
-﻿namespace BaseLibrary.Entities
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace BaseLibrary.Entities
 {
     public class Employee
     {
-        public string? Fullname { get; set; }
-        public string? TelephoneNumber { get; set; }
+        public int Id { get; set; }
+        
+        [Required]
+        public string Fullname { get; set; } = string.Empty;
+        
+        [Required]
+        public string TelephoneNumber { get; set; } = string.Empty;
     }
 }

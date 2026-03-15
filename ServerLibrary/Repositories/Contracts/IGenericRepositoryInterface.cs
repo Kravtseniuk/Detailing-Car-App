@@ -1,4 +1,5 @@
-﻿using BaseLibrary.Responses;
+﻿using BaseLibrary.DTOs;
+using BaseLibrary.Responses;
 
 namespace ServerLibrary.Repositories.Contracts
 {

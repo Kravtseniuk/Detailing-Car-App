@@ -1,4 +1,4 @@
-﻿namespace BaseLibrary.DTOs
+﻿namespace BaseLibrary.DTOs.Order
 {
     public class GetOrdersDto
     {
@@ -8,7 +8,8 @@
         public string CustomerAuto { get; set; } = string.Empty;
         public decimal PriceForServices { get; set; }
         public string ExecutorOfWork { get; set; } = string.Empty;
-        public TimeSpan? WorkStartTime { get; set; }
-        public TimeSpan? WorkEndTime { get; set; }
+        public TimeSpan WorkStartTime { get; set; }
+        public TimeSpan WorkEndTime { get; set; }
+        public List<string> Services { get; set; } = new();
     }
 }

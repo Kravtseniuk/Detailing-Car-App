@@ -1,14 +1,15 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace BaseLibrary.DTOs
+namespace BaseLibrary.DTOs.Order
 {
     public class SaveOrderDto
     {
         public int Id { get; set; }
 
-        [Required]
         [StringLength(100, ErrorMessage = "Название заказа не должно превышать 100 символов.")]
         public string OrderName { get; set; } = string.Empty;
+
+        public List<OrderServiceDto> CompanyServices { get; set; } = new();
 
         [Required]
         public DateTime DateCreated { get; set; } = DateTime.UtcNow;

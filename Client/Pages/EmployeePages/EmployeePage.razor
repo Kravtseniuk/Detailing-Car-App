@@ -1,0 +1,134 @@
+﻿@page "/emloyeePage"
+@inject IDialogService DialogService
+
+@if (allState.ShowEmployee)
+{
+    <MudTable Elevation="4" Class="py-8 px-10" Items="@Employees" Hover="true" SortLabel="Sort By">
+
+        <HeaderContent>
+
+            <MudTh><MudTableSortLabel SortBy="new Func<Employee, object>(x => x.FirstName)">Ім'я робітника</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<Employee, object>(x => x.SecondName)">Фамілія</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<Employee, object>(x => x.LastName)">По батькові</MudTableSortLabel></MudTh>
+
+            <MudTh><MudTableSortLabel SortBy="new Func<Employee, object>(x => x.TelephoneNumber)">Номер телефону</MudTableSortLabel></MudTh>
+
+            <MudTh Class="text-center" Style="width:135px">
+                <MudIconButton @onclick="OpenDialog" Icon="@Icons.Material.Filled.Add" Color="Color.Dark" aria-label="add to favorite"></MudIconButton>
+            </MudTh>
+
+        </HeaderContent>
+
+        <RowTemplate>
+
+            <MudTd DataLabel="Ім'я робітника">@context.FirstName</MudTd>
+            <MudTd DataLabel="Ім'я робітника">@context.SecondName</MudTd>
+            <MudTd DataLabel="Ім'я робітника">@context.LastName</MudTd>
+
+            <MudTd DataLabel="Номер телефону">@context.TelephoneNumber</MudTd>
+
+            <MudTd Class="text-center" DataLabel="Actions">
+
+                <MudIconButton @onclick="() => EditClicked(context)" Icon="@Icons.Material.Filled.Edit" aria-label="edit" Color="Color.Info"></MudIconButton>
+
+                <MudIconButton @onclick="() => DeleteClicked(context)" Icon="@Icons.Material.Filled.Delete" aria-label="delete" Color="Color.Error"></MudIconButton>
+
+            </MudTd>
+
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+
+    </MudTable>
+}
+
+@code {
+    public List<Employee> Employees { get; set; } = new();
+    Employee Employee = new();
+
+    private async Task GetEmployees()
+    {
+        Employees = await employeeService.GetAll(Constants.EmployeeBaseUrl);
+    }
+
+    private void EditClicked(Employee employee)
+    {
+        Employee = employee;
+        OpenDialog();
+    }
+
+    private async Task DeleteClicked(Employee employee)
+    {
+        string state = "Message box hasn't been opened yet";
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Увага",
+            "Ви підтверджуєте видалення?",
+            yesText: "Видалити!", cancelText: "Відмінити");
+
+        if (result == false || result == null)
+        {
+            state = "Canceled";
+            StateHasChanged();
+            return;
+        }
+
+        state = "Deleted!";
+        StateHasChanged();
+
+        var response = await employeeService.DeleteById(employee.Id, Constants.EmployeeBaseUrl);
+        await GetEmployees();
+    }
+
+    private async Task HandleSaveOperationEvent(Employee employee)
+    {
+        bool successCheck = false;
+        if (employee.Id > 0)
+        {
+            var result = await employeeService.Update(employee, Constants.EmployeeBaseUrl);
+            successCheck = result != null;
+        }
+        else
+        {
+            var response = await employeeService.Insert(employee, Constants.EmployeeBaseUrl);
+            successCheck = response != null;
+        }
+        if (successCheck)
+        {
+            Employee = new();
+            await GetEmployees();
+        }
+    }
+
+    private void OpenDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Employee", Employee },
+            { "HandleSaveOperationEvent", EventCallback.Factory.Create<Employee>(this, HandleSaveOperationEvent) }
+        };
+
+        var options = new DialogOptions
+        {
+            ClassBackground = "my-custom-class",
+            MaxWidth = MaxWidth.Large,
+            Position = DialogPosition.Center,
+            FullWidth = true
+        };
+
+        DialogService.Show<EmployeeDialog>("Додати працівника", parameters, options);
+    }
+
+
+    protected override void OnInitialized()
+    {
+        allState.EmployeeClicked();
+    }
+
+    protected async override Task OnInitializedAsync()
+    {
+        await GetEmployees();
+    }
+}

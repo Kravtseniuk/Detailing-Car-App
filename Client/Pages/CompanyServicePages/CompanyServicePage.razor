@@ -1,0 +1,145 @@
+﻿@page "/companyServicePage"
+@inject IDialogService DialogService
+
+@if (allState.ShowCompanyServices)
+{
+    <MudTable Elevation="4" Class="py-8 px-10" Items="@CompanyServicesEntity" Hover="true" SortLabel="Sort By">
+
+        <HeaderContent>
+
+            <MudTh><MudTableSortLabel SortBy="new Func<CompanyService, object>(x => x.ServiceName)">Назва сервісу</MudTableSortLabel></MudTh>
+
+            <MudTh><MudTableSortLabel SortBy="new Func<CompanyService, object>(x => x.Description)">Опис</MudTableSortLabel></MudTh>
+
+            <MudTh><MudTableSortLabel SortBy="new Func<CompanyService, object>(x => x.DefaultPrice)">Ціна</MudTableSortLabel></MudTh>
+
+            <MudTh Class="text-center" Style="width:135px">
+                <MudIconButton @onclick="OpenDialog" Icon="@Icons.Material.Filled.Add" Color="Color.Dark" aria-label="add to favorite"></MudIconButton>
+            </MudTh>
+
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd DataLabel="Назва сервісу">@context.ServiceName</MudTd>
+
+            <MudTd DataLabel="Опис">@context.Description</MudTd>
+
+            <MudTd DataLabel="Ціна">@context.DefaultPrice</MudTd>
+
+            <MudTd Class="text-center" DataLabel="Actions">
+
+                <MudIconButton @onclick="() => EditClicked(context)" Icon="@Icons.Material.Filled.Edit" aria-label="edit" Color="Color.Info"></MudIconButton>
+
+                <MudIconButton @onclick="() => DeleteClicked(context)" Icon="@Icons.Material.Filled.Delete" aria-label="delete" Color="Color.Error"></MudIconButton>
+
+            </MudTd>
+
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+
+    </MudTable>
+}
+
+<style>
+    .my-custom-class {
+        backdrop-filter: blur(5px);
+    }
+</style>
+
+@code {
+    public List<CompanyService> CompanyServicesEntity { get; set; } = new();
+    CompanyService CompanyService = new();
+
+    private async Task GetCompanyServices()
+    {
+        CompanyServicesEntity = await companyServiceEntityService.GetAll(Constants.CompanyServiceBaseUrl);
+    }
+
+    void AddButtonClicked()
+    {
+        CompanyService = new();
+        OpenDialog();
+    }
+
+    private void EditClicked(CompanyService companyService)
+    {
+        CompanyService = companyService;
+        OpenDialog();
+    }
+
+    private async Task DeleteClicked(CompanyService companyService)
+    {
+        string state = "Message box hasn't been opened yet";
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Увага",
+            "Ви підтверджуєте видалення?",
+            yesText: "Видалити!", cancelText: "Відмінити");
+
+        if (result == false || result == null)
+        {
+            state = "Canceled";
+            StateHasChanged();
+            return;
+        }
+
+        state = "Deleted!";
+        StateHasChanged();
+
+        var response = await companyServiceEntityService.DeleteById(companyService.Id, Constants.CompanyServiceBaseUrl);
+        await GetCompanyServices();
+    }
+
+
+    private async Task HandleSaveOperationEvent(CompanyService companyService)
+    {
+        bool successCheck = false;
+        if (companyService.Id > 0)
+        {
+            var result = await companyServiceEntityService.Update(companyService, Constants.CompanyServiceBaseUrl);
+            successCheck = result != null;
+        }
+        else
+        {
+            var response = await companyServiceEntityService.Insert(companyService, Constants.CompanyServiceBaseUrl);
+            successCheck = response != null;
+        }
+        if (successCheck)
+        {
+            CompanyService = new();
+            await GetCompanyServices();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        allState.CompanyServicesClicked();
+    }
+
+    protected async override Task OnInitializedAsync()
+    {
+        await GetCompanyServices();
+    }
+
+    private void OpenDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "CompanyServiceEntity", CompanyService },
+            { "HandleSaveOperationEvent", EventCallback.Factory.Create<CompanyService>(this, HandleSaveOperationEvent) }
+        };
+
+        var options = new DialogOptions
+        {
+            ClassBackground = "my-custom-class",
+            MaxWidth = MaxWidth.Large,
+            Position = DialogPosition.Center,
+            FullWidth = true
+        };
+
+        DialogService.Show<CompanyServiceDialog>("Добавити сервіс", parameters, options);
+    }
+}

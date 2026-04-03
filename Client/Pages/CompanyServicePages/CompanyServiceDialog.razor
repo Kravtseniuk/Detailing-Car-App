@@ -1,0 +1,28 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="CompanyServiceEntity.ServiceName" Label="Назва сервісу" Variant="Variant.Outlined"></MudTextField>
+
+        <MudNumericField @bind-Value="CompanyServiceEntity.DefaultPrice" Label="Прайс за послугу" Format="F1" Variant="Variant.Outlined" />
+
+        <MudTextField @bind-Value="CompanyServiceEntity.Description" Label="Опис" Variant="Variant.Outlined"></MudTextField>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Save">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public CompanyService CompanyServiceEntity { get; set; }
+    [Parameter] public EventCallback<CompanyService> HandleSaveOperationEvent { get; set; }
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+
+    public async Task Save()
+    {
+        await HandleSaveOperationEvent.InvokeAsync(CompanyServiceEntity);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

@@ -1,0 +1,163 @@
+﻿@page "/"
+@inject MudBlazor.IDialogService DialogService
+
+<div class="row">
+
+    @if (GetOrdersDtos == null || !GetOrdersDtos.Any())
+    {
+        <div class="col-md-4">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Записи</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" @onclick="OpenDialog" Color="Color.Success" />
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>Поки що немає записів. Створіть перший.</MudText>
+                </MudCardContent>
+            </MudCard>
+        </div>
+    }
+    else
+    {
+        <div class="col-md-4">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Записи</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" @onclick="OpenDialog" Color="Color.Success" />
+                    </CardHeaderActions>
+                </MudCardHeader>
+                
+                <MudCardContent>
+                    <div class="row">
+                        @foreach (var order in GetOrdersDtos)
+                        {
+                            <div class="col-12 col-md-6 mb-4">
+                                <MudCard Class="card-inside">
+                                    <MudCardHeader>
+                                        <CardHeaderContent>
+                                            <MudText Typo="Typo.h6">Запис №@order.Id</MudText>
+                                        </CardHeaderContent>
+                                        <CardHeaderActions>
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" Size="Size.Small" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" aria-label="delete" Color="Color.Error" Size="Size.Small"></MudIconButton>
+                                        </CardHeaderActions>
+                                    </MudCardHeader>
+                                    <MudCardContent>
+                                        <MudText><b>Послуги:</b> @string.Join(", ", order.Services)</MudText>
+                                        <MudText><b>Авто:</b> @order.CustomerAuto</MudText>
+                                        <MudText><b>Клієнт:</b> @order.CustomerName</MudText>
+                                        <MudText><b>Ціна:</b> @($"{order.PriceForServices:F2} ₴")</MudText>
+                                        <MudText><b>Виконавець:</b> @order.ExecutorOfWork</MudText>
+                                        <MudText><b>Початок:</b> @($"{order.WorkStartTime:hh\\:mm}")</MudText>
+                                        <MudText><b>Кінець:</b> @($"{order.WorkEndTime:hh\\:mm}")</MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </div>
+                        }
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </div>
+    }
+
+    <div class="col-md-4">
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">В процесі</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" @onclick="OpenDialog" Color="Color.Success" />
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText>Поки що немає записів. Створіть перший.</MudText>
+            </MudCardContent>
+        </MudCard>
+    </div>
+
+    <div class="col-md-4">
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Готово</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudIconButton Icon="@Icons.Material.Filled.Add" @onclick="OpenDialog" Color="Color.Success" />
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText>Поки що немає записів. Створіть перший.</MudText>
+            </MudCardContent>
+        </MudCard>
+    </div>
+</div>
+
+@code {
+    public List<Order> Orders { get; set; } = new();
+    public List<GetOrdersDto>? GetOrdersDtos { get; set; }
+    OrderDialog? orderDialog;
+    Order Order = new();
+    SaveOrderDto SaveOrderDto = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetOrders();
+    }
+
+    private async Task GetOrders()
+    {
+        GetOrdersDtos = await orderServiceDto.GetAllOrdersAsync(Constants.OrderBaseUrl);
+    }
+
+    void AddButtonClicked()
+    {
+        SaveOrderDto = new();
+        OpenDialog();
+    }
+
+    private async Task HandleSaveOperationEvent(SaveOrderDto orderDto)
+    {
+        bool successCheck = false;
+        if (orderDto.Id > 0)
+        {
+            var result = await orderServiceDto.Update(orderDto, Constants.OrderBaseUrl);
+            successCheck = result != null;
+        }
+        else
+        {
+            var response = await orderServiceDto.InsertOrder(orderDto, Constants.OrderBaseUrl);
+            successCheck = response != null;
+        }
+        if (successCheck)
+        {
+            Order = new();
+            await GetOrders();
+        }
+    }
+
+    private void OpenDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Order", SaveOrderDto },
+            { "HandleSaveOperationEvent", EventCallback.Factory.Create<SaveOrderDto>(this, HandleSaveOperationEvent) }};
+
+        var options = new DialogOptions
+        {
+            ClassBackground = "my-custom-class",
+            MaxWidth = MaxWidth.Large,
+            Position = DialogPosition.Center,
+            FullWidth = true
+        };
+
+        DialogService.Show<OrderDialog>("Додати замовлення", parameters, options);
+    }
+}

@@ -1,0 +1,28 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="Employee.FirstName" Label="Ім'я робітника" Variant="Variant.Outlined"></MudTextField>
+        <MudTextField @bind-Value="Employee.SecondName" Label="Фамілія" Variant="Variant.Outlined"></MudTextField>
+        <MudTextField @bind-Value="Employee.LastName" Label="По батькові" Variant="Variant.Outlined"></MudTextField>
+
+        <MudTextField @bind-Value="Employee.TelephoneNumber" Label="Номер телефону" Variant="Variant.Outlined"></MudTextField>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Save">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public Employee Employee { get; set; }
+    [Parameter] public EventCallback<Employee> HandleSaveOperationEvent { get; set; }
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+
+    public async Task Save()
+    {
+        await HandleSaveOperationEvent.InvokeAsync(Employee);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

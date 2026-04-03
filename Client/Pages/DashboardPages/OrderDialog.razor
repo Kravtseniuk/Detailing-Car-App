@@ -1,0 +1,120 @@
+﻿<MudDialog>
+
+    <DialogContent>
+        
+        <MudSelect T="CompanyServiceDto"
+                   Label="Оберіть сервіси"
+                   MultiSelection="true"
+                   SelectedValues="_selectedServices"
+                   SelectedValuesChanged="@(values => { _selectedServices = values.ToHashSet(); SyncServices(); })"
+                   ToStringFunc="@(s => s?.CompanyServiceName)"
+                   Variant="Variant.Outlined">
+
+            @foreach (var service in Services)
+            {
+                <MudSelectItem Value="service">
+                    @service.CompanyServiceName (@service.DefaultPrice грн)
+                </MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudTextField @bind-Value="Order.TotalPrice" Label="Загальна ціна" Variant="Variant.Outlined" ReadOnly="true" Class="mt-2" />
+
+        <MudTextField @bind-Value="Order.CustomerFullName" Label="Прізвище та ім'я клієнта" Variant="Variant.Outlined"></MudTextField>
+
+        <MudTextField @bind-Value="Order.CustomerPhone" Label="Номер телефону клієнта" Variant="Variant.Outlined"></MudTextField>
+        
+        <MudTextField @bind-Value="Order.CustomerAuto" Label="Авто" Variant="Variant.Outlined"></MudTextField>
+
+        <MudSelect T="int" @bind-Value="Order.EmployeeId" Variant="Variant.Outlined">
+            <MudSelectItem Value="0" Disabled="true">Хто буде виконувати замовлення?</MudSelectItem>
+            @foreach (var employee in Employees)
+            {
+                <MudSelectItem Value="@employee.Id">@employee.FullName</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudTimePicker Variant="Variant.Outlined" @bind-Time="Order.WorkStartTime" Label="Час початку роботи" AmPm="false" />
+
+        <MudTimePicker Variant="Variant.Outlined" @bind-Time="Order.WorkEndTime" Label="Час закінчення роботи" AmPm="false" />
+
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">Відмінити</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Save">Зберегти</MudButton>
+    </DialogActions>
+
+</MudDialog>
+
+@code {
+    [Parameter] public SaveOrderDto Order { get; set; }
+    [Parameter] public EventCallback<SaveOrderDto> HandleSaveOperationEvent { get; set; }
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    private List<EmployeeDto> Employees = new();
+    private List<CompanyServiceDto> Services = new();
+
+    [Inject] public IGenericServiceInterface<EmployeeDto> EmployeeService { get; set; }
+    [Inject] public IGenericServiceInterface<CompanyServiceDto> CompanyService { get; set; }
+
+    private HashSet<CompanyServiceDto> _selectedServices = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Employees = await EmployeeService.GetAllEmployeesAsync(Constants.EmployeeBaseUrl);
+        Services = await CompanyService.GetCompanyServiceForDropdown(Constants.CompanyServiceBaseUrl);
+    }
+
+    private void OnServiceChecked(CompanyServiceDto service, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!Order.CompanyServices.Any(s => s.ServiceId == service.Id))
+            {
+                Order.CompanyServices.Add(new OrderServiceDto
+                {
+                    ServiceId = service.Id,
+                    Price = service.DefaultPrice
+                });
+            }
+        }
+        else
+        {
+            var existing = Order.CompanyServices.FirstOrDefault(s => s.ServiceId == service.Id);
+            if (existing != null)
+                Order.CompanyServices.Remove(existing);
+        }
+
+        CalculateTotal();
+    }
+
+    private void CalculateTotal()
+    {
+        Order.TotalPrice = Order.CompanyServices.Sum(s => s.Price);
+    }
+
+    private void SyncServices()
+    {
+        Order.CompanyServices = _selectedServices
+            .Select(s => new OrderServiceDto
+            {
+                ServiceId = s.Id,
+                Price = s.DefaultPrice
+            })
+            .ToList();
+
+        CalculateTotal();
+    }
+
+    public async Task Save()
+    {
+        await HandleSaveOperationEvent.InvokeAsync(Order);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+    
+    void Cancel() => MudDialog.Cancel();
+    
+    bool IsSelected(CompanyServiceDto s) => Order.CompanyServices.Any(cs => cs.ServiceId == s.Id);
+
+    decimal GetPrice(CompanyServiceDto s) => Order.CompanyServices.FirstOrDefault(cs => cs.ServiceId == s.Id)?.Price ?? s.DefaultPrice;
+}

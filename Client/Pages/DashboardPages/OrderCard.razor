@@ -1,0 +1,55 @@
+﻿<MudCard Class="card-inside">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Запис №@Order.Id</MudText>
+        </CardHeaderContent>
+
+        <CardHeaderActions>
+            @if (Order.Status == OrderStatus.Pending)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               OnClick="@(() => MoveToInProgress.InvokeAsync(Order.Id))" />
+            }
+
+            @if (Order.Status == OrderStatus.InProgress)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Check"
+                               Color="Color.Success"
+                               Size="Size.Small"
+                               OnClick="@(() => MoveToCompleted.InvokeAsync(Order.Id))" />
+            }
+
+            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                           Color="Color.Info"
+                           Size="Size.Small"
+                           OnClick="@(() => OnEdit.InvokeAsync(Order))" />
+
+            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           OnClick="@(() => OnDelete.InvokeAsync(Order.Id))" />
+        </CardHeaderActions>
+    </MudCardHeader>
+
+    <MudCardContent>
+        <MudText><b>Послуги:</b> @string.Join(", ", Order.Services)</MudText>
+        <MudText><b>Авто:</b> @Order.CustomerAuto</MudText>
+        <MudText><b>Клієнт:</b> @Order.CustomerName</MudText>
+        <MudText><b>Ціна:</b> @($"{Order.PriceForServices:F2} ₴")</MudText>
+        <MudText><b>Виконавець:</b> @Order.ExecutorOfWork</MudText>
+        <MudText><b>Початок:</b> @($"{Order.WorkStartTime:hh\\:mm}")</MudText>
+        <MudText><b>Кінець:</b> @($"{Order.WorkEndTime:hh\\:mm}")</MudText>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public GetOrdersDto Order { get; set; } = default!;
+
+    [Parameter] public EventCallback<int> MoveToInProgress { get; set; }
+    [Parameter] public EventCallback<int> MoveToCompleted { get; set; }
+
+    [Parameter] public EventCallback<GetOrdersDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+}

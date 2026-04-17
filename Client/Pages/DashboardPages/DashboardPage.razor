@@ -2,7 +2,7 @@
 @inject MudBlazor.IDialogService DialogService
 
 <div class="row">
-
+    
     @if (GetOrdersDtos == null || !GetOrdersDtos.Any())
     {
         <div class="col-md-4">
@@ -36,29 +36,13 @@
                 
                 <MudCardContent>
                     <div class="row">
-                        @foreach (var order in GetOrdersDtos)
+                        @foreach (var order in PendingOrders)
                         {
                             <div class="col-12 col-md-6 mb-4">
-                                <MudCard Class="card-inside">
-                                    <MudCardHeader>
-                                        <CardHeaderContent>
-                                            <MudText Typo="Typo.h6">Запис №@order.Id</MudText>
-                                        </CardHeaderContent>
-                                        <CardHeaderActions>
-                                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" Size="Size.Small" />
-                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" aria-label="delete" Color="Color.Error" Size="Size.Small"></MudIconButton>
-                                        </CardHeaderActions>
-                                    </MudCardHeader>
-                                    <MudCardContent>
-                                        <MudText><b>Послуги:</b> @string.Join(", ", order.Services)</MudText>
-                                        <MudText><b>Авто:</b> @order.CustomerAuto</MudText>
-                                        <MudText><b>Клієнт:</b> @order.CustomerName</MudText>
-                                        <MudText><b>Ціна:</b> @($"{order.PriceForServices:F2} ₴")</MudText>
-                                        <MudText><b>Виконавець:</b> @order.ExecutorOfWork</MudText>
-                                        <MudText><b>Початок:</b> @($"{order.WorkStartTime:hh\\:mm}")</MudText>
-                                        <MudText><b>Кінець:</b> @($"{order.WorkEndTime:hh\\:mm}")</MudText>
-                                    </MudCardContent>
-                                </MudCard>
+                                <OrderCard Order="@order"
+                                           MoveToInProgress="MoveToInProgress"
+                                           OnEdit="@(o => OpenDialog())"
+                                           OnDelete="@(id => DeleteOrder(id))" />
                             </div>
                         }
                     </div>
@@ -73,12 +57,17 @@
                 <CardHeaderContent>
                     <MudText Typo="Typo.h6">В процесі</MudText>
                 </CardHeaderContent>
-                <CardHeaderActions>
-                    <MudIconButton Icon="@Icons.Material.Filled.Add" @onclick="OpenDialog" Color="Color.Success" />
-                </CardHeaderActions>
             </MudCardHeader>
             <MudCardContent>
-                <MudText>Поки що немає записів. Створіть перший.</MudText>
+                @foreach (var order in InProgressOrders)
+                {
+                    <div class="col-12 col-md-6 mb-4">
+                        <OrderCard Order="@order"
+                                   MoveToCompleted="MoveToCompleted"
+                                   OnEdit="@(o => OpenDialog())"
+                                   OnDelete="@(id => DeleteOrder(id))" />
+                    </div>
+                }
             </MudCardContent>
         </MudCard>
     </div>
@@ -89,23 +78,30 @@
                 <CardHeaderContent>
                     <MudText Typo="Typo.h6">Готово</MudText>
                 </CardHeaderContent>
-                <CardHeaderActions>
-                    <MudIconButton Icon="@Icons.Material.Filled.Add" @onclick="OpenDialog" Color="Color.Success" />
-                </CardHeaderActions>
             </MudCardHeader>
             <MudCardContent>
-                <MudText>Поки що немає записів. Створіть перший.</MudText>
+                @foreach (var order in CompletedOrders)
+                {
+                    <div class="col-12 col-md-6 mb-4">
+                        <OrderCard Order="@order"
+                                   OnEdit="@(o => OpenDialog())"
+                                   OnDelete="@(id => DeleteOrder(id))" />
+                    </div>
+                }
             </MudCardContent>
         </MudCard>
     </div>
 </div>
 
 @code {
-    public List<Order> Orders { get; set; } = new();
+    private List<GetOrdersDto> PendingOrders => GetOrdersDtos?.Where(o => o.Status == OrderStatus.Pending).ToList() ?? new();
+    private List<GetOrdersDto> InProgressOrders => GetOrdersDtos?.Where(o => o.Status == OrderStatus.InProgress).ToList() ?? new();
+    private List<GetOrdersDto> CompletedOrders => GetOrdersDtos?.Where(o => o.Status == OrderStatus.Completed).ToList() ?? new();
     public List<GetOrdersDto>? GetOrdersDtos { get; set; }
+    public List<Order> Orders { get; set; } = new();
+    SaveOrderDto SaveOrderDto = new();
     OrderDialog? orderDialog;
     Order Order = new();
-    SaveOrderDto SaveOrderDto = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -159,5 +155,39 @@
         };
 
         DialogService.Show<OrderDialog>("Додати замовлення", parameters, options);
+    }
+
+    private async Task MoveToInProgress(int orderId)
+    {
+        await orderServiceDto.UpdateOrderStatusAsync(
+            new UpdateOrderStatusDto
+            {
+                OrderId = orderId,
+                Status = OrderStatus.InProgress
+            },
+            Constants.OrderBaseUrl
+        );
+
+        await GetOrders();
+    }
+
+    private async Task MoveToCompleted(int orderId)
+    {
+        await orderServiceDto.UpdateOrderStatusAsync(
+            new UpdateOrderStatusDto
+            {
+                OrderId = orderId,
+                Status = OrderStatus.Completed
+            },
+            Constants.OrderBaseUrl
+        );
+
+        await GetOrders();
+    }
+
+    private async Task DeleteOrder(int id)
+    {
+        await orderServiceDto.DeleteById(id, Constants.OrderBaseUrl);
+        await GetOrders();
     }
 }

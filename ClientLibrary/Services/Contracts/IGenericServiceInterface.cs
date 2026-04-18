@@ -7,7 +7,6 @@ namespace ClientLibrary.Services.Contracts
     public interface IGenericServiceInterface<T>
     {
         Task<List<T>> GetAll(string baseUrl);
-
         Task<GeneralResponse> InsertOrder(T item, string baseUrl);
         Task<List<EmployeeDto>> GetAllEmployeesAsync(string baseUrl);
         Task<List<GetOrdersDto>> GetAllOrdersAsync(string baseUrl);
@@ -17,5 +16,7 @@ namespace ClientLibrary.Services.Contracts
         Task<GeneralResponse> Insert(T item, string baseUrl);
         Task<GeneralResponse> Update(T item, string baseUrl);
         Task<GeneralResponse> DeleteById(int id, string baseUrl);
+
+        Task<GeneralResponse> UpdateOrderStatusAsync(UpdateOrderStatusDto dto, string baseUrl);
     }
 }

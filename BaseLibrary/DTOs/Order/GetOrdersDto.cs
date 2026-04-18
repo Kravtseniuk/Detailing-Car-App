@@ -1,4 +1,5 @@
-﻿namespace BaseLibrary.DTOs.Order
+﻿using BaseLibrary.Entities;
+namespace BaseLibrary.DTOs.Order
 {
     public class GetOrdersDto
     {
@@ -11,5 +12,6 @@
         public TimeSpan WorkStartTime { get; set; }
         public TimeSpan WorkEndTime { get; set; }
         public List<string> Services { get; set; } = new();
+        public OrderStatus Status { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using BaseLibrary.DTOs;
+﻿using BaseLibrary.DTOs.Order;
 using BaseLibrary.Entities;
 using BaseLibrary.Responses;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +36,8 @@ namespace ServerLibrary.Repositories.Implementations
             var orders = await appDbContext.Orders
                 .Include(o => o.Customer)
                 .Include(o => o.ExecutorOfTheWork)
+                .Include(o => o.OrderCompanyServices)
+                    .ThenInclude(ocs => ocs.CompanyService)
                 .Select(o => new GetOrdersDto
                 {
                     Id = o.Id,
@@ -45,7 +47,11 @@ namespace ServerLibrary.Repositories.Implementations
                     PriceForServices = o.TotalPrice ?? 0,
                     ExecutorOfWork = o.ExecutorOfTheWork.FullName,
                     WorkStartTime = o.WorkStartTime ?? TimeSpan.Zero,
-                    WorkEndTime = o.WorkEndTime ?? TimeSpan.Zero
+                    WorkEndTime = o.WorkEndTime ?? TimeSpan.Zero,
+                    Status = o.Status,
+                    Services = o.OrderCompanyServices
+                        .Select(s => s.CompanyService.ServiceName)
+                        .ToList()
                 })
                 .ToListAsync();
 
@@ -55,7 +61,8 @@ namespace ServerLibrary.Repositories.Implementations
         public async Task<int> SaveOrderAsync(SaveOrderDto saveOrderDto)
         {
             var customer = await appDbContext.Customers
-                .FirstOrDefaultAsync(c => c.FullName == saveOrderDto.CustomerFullName && c.TelephoneNumber == saveOrderDto.CustomerPhone);
+                .FirstOrDefaultAsync(c => c.FullName == saveOrderDto.CustomerFullName
+                                       && c.TelephoneNumber == saveOrderDto.CustomerPhone);
 
             if (customer == null)
             {
@@ -73,19 +80,47 @@ namespace ServerLibrary.Repositories.Implementations
             var order = new Order
             {
                 OrderName = saveOrderDto.OrderName,
-                DateCreated = saveOrderDto.DateCreated,
+                DateCreated = DateTime.UtcNow,
                 CustomerId = customer.Id,
                 Status = OrderStatus.Pending,
-                TotalPrice = saveOrderDto.TotalPrice,
                 WorkStartTime = saveOrderDto.WorkStartTime,
                 WorkEndTime = saveOrderDto.WorkEndTime,
                 EmployeeId = saveOrderDto.EmployeeId
             };
 
+            foreach (var service in saveOrderDto.CompanyServices)
+            {
+                order.OrderCompanyServices.Add(new OrderServiceMapping
+                {
+                    CompanyServiceId = service.ServiceId,
+                    Price = service.Price
+                });
+            }
+
+            order.TotalPrice = order.OrderCompanyServices.Sum(x => x.Price);
+
             appDbContext.Orders.Add(order);
             await appDbContext.SaveChangesAsync();
 
             return order.Id;
+        }
+
+        public async Task<bool> UpdateStatusAsync(UpdateOrderStatusDto dto)
+        {
+            var order = await appDbContext.Orders.FirstOrDefaultAsync(o => o.Id == dto.OrderId);
+            if (order == null)
+                return false;
+
+            order.Status = dto.Status;
+
+            if (dto.Status == OrderStatus.InProgress)
+                order.WorkStartTime ??= DateTime.UtcNow.TimeOfDay;
+
+            if (dto.Status == OrderStatus.Completed)
+                order.WorkEndTime ??= DateTime.UtcNow.TimeOfDay;
+
+            await appDbContext.SaveChangesAsync();
+            return true;
         }
 
 
